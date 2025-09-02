@@ -22,7 +22,7 @@ class _PostApiScreenState extends State<PostApiScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.redAccent[700],
+      backgroundColor: const Color(0xFF2A3B55),
       body: Stack(children: [buildBackground(), buildLayer()]),
     );
   }
@@ -279,7 +279,7 @@ class _PostApiScreenState extends State<PostApiScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(32),
-          borderSide: BorderSide(color: Colors.black, width: 1.0),
+          borderSide: BorderSide(color: Colors.white, width: 1.0),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(32),

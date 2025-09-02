@@ -24,7 +24,7 @@ class _LoginAPIScreenState extends State<LoginAPIScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.redAccent[700],
+      backgroundColor: const Color(0xFF2A3B55),
       body: Stack(children: [buildBackground(), buildLayer()]),
     );
   }
@@ -61,7 +61,7 @@ class _LoginAPIScreenState extends State<LoginAPIScreen> {
       print(user?.toJson());
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => HalamanUtamaDua()),
+        MaterialPageRoute(builder: (context) => MovieApp()),
       );
     } catch (e) {
       print(e);
