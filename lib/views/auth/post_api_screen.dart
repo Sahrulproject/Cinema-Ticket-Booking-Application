@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:tixclick/api/register_user.dart';
 import 'package:tixclick/models/register_model.dart';
-import 'package:tixclick/preference/shared_preference.dart';
+import 'package:tixclick/services/auth_service.dart'; // Ganti dengan AuthService
 import 'package:tixclick/views/auth/login_api_screen.dart';
 
 class PostApiScreen extends StatefulWidget {
@@ -19,6 +19,7 @@ class _PostApiScreenState extends State<PostApiScreen> {
   String? errorMessage;
   bool isVisibility = false;
   bool isLoading = false;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -35,50 +36,93 @@ class _PostApiScreenState extends State<PostApiScreen> {
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
     final name = nameController.text.trim();
+
     if (email.isEmpty || password.isEmpty || name.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text("Email, Password, dan Nama tidak boleh kosong"),
         ),
       );
-      isLoading = false;
-
+      setState(() => isLoading = false);
       return;
     }
+
     try {
       final result = await AuthenticationAPI.registerUser(
         email: email,
         password: password,
         name: name,
       );
+
       setState(() {
         user = result;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Pendaftaran berhasil")));
-      PreferenceHandler.saveToken(user?.data?.token.toString() ?? "");
-      print(user?.toJson());
+
+      // DEBUG PRINT
+      _debugPrintResponse();
+
+      // PERBAIKAN: Token sekarang di root, bukan dalam data
+      if (user?.token != null) {
+        await _saveUserData(email, name);
+
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Pendaftaran berhasil")));
+
+        print(user?.toJson());
+
+        // Navigate ke login screen setelah registrasi berhasil
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => LoginAPIScreen()),
+        );
+      } else {
+        throw Exception("Token tidak ditemukan dalam response");
+      }
     } catch (e) {
       print(e);
       setState(() {
         errorMessage = e.toString();
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(errorMessage.toString())));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Registrasi gagal: $errorMessage")),
+      );
     } finally {
-      setState(() {});
-      isLoading = false;
+      setState(() => isLoading = false);
     }
-    // final user = User(email: email, password: password, name: name);
-    // await DbHelper.registerUser(user);
-    // Future.delayed(const Duration(seconds: 1)).then((value) {
-    //   isLoading = false;
-    //   ScaffoldMessenger.of(
-    //     context,
-    //   ).showSnackBar(const SnackBar(content: Text("Pendaftaran berhasil")));
-    // });
+  }
+
+  // Method untuk debug print response
+  void _debugPrintResponse() {
+    print('=== DEBUG REGISTER RESPONSE ===');
+    print('Message: ${user?.message}');
+    print('Token: ${user?.token}'); // Token di root
+    print('User name: ${user?.user?.name}');
+    print('User email: ${user?.user?.email}');
+    print('User ID: ${user?.user?.id}');
+    print('Email verified: ${user?.user?.emailVerifiedAt}');
+    print('Full response: ${user?.toJson()}');
+    print('===============================');
+  }
+
+  // Method untuk save user data - DIUBAH untuk model baru
+  Future<void> _saveUserData(String email, String name) async {
+    // PERBAIKAN: Token di root, bukan dalam data
+    await AuthService.saveToken(user!.token!);
+    await AuthService.saveUserEmail(email);
+    await AuthService.saveUserName(name);
+
+    final userId = user?.user?.id;
+    if (userId != null) {
+      await AuthService.saveUserId(userId);
+    }
+
+    print('=== DATA YANG DISIMPAN ===');
+    print('Token: ${user!.token}'); // Token di root
+    print('Name: $name');
+    print('Email: $email');
+    print('ID: $userId');
+    print('==========================');
   }
 
   SafeArea buildLayer() {
@@ -88,7 +132,6 @@ class _PostApiScreenState extends State<PostApiScreen> {
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            // crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Text(
                 "Register",
@@ -125,10 +168,7 @@ class _PostApiScreenState extends State<PostApiScreen> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () {
-                    // Navigator.push(
-                    //   context,
-                    //   MaterialPageRoute(builder: (context) => MeetSebelas()),
-                    // );
+                    // Forgot password functionality
                   },
                   child: Text(
                     "Forgot Password?",
@@ -145,17 +185,15 @@ class _PostApiScreenState extends State<PostApiScreen> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () {
-                    registerUser();
-                  },
+                  onPressed: isLoading ? null : registerUser,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.white,
+                    backgroundColor: isLoading ? Colors.grey : Colors.white,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(6),
                     ),
                   ),
                   child: isLoading
-                      ? CircularProgressIndicator()
+                      ? const CircularProgressIndicator()
                       : Text(
                           "Submit",
                           style: TextStyle(fontSize: 16, color: Colors.black),
@@ -168,7 +206,7 @@ class _PostApiScreenState extends State<PostApiScreen> {
                 children: [
                   Expanded(
                     child: Container(
-                      margin: EdgeInsets.only(right: 8),
+                      margin: const EdgeInsets.only(right: 8),
                       height: 1,
                       color: Colors.white,
                     ),
@@ -179,7 +217,7 @@ class _PostApiScreenState extends State<PostApiScreen> {
                   ),
                   Expanded(
                     child: Container(
-                      margin: EdgeInsets.only(left: 8),
+                      margin: const EdgeInsets.only(left: 8),
                       height: 1,
                       color: Colors.white,
                     ),
@@ -194,8 +232,7 @@ class _PostApiScreenState extends State<PostApiScreen> {
                     backgroundColor: Colors.white,
                   ),
                   onPressed: () {
-                    // Navigate to MeetLima screen menggunakan pushnamed
-                    Navigator.pushNamed(context, "/meet_2");
+                    // Google sign in functionality
                   },
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -250,12 +287,7 @@ class _PostApiScreenState extends State<PostApiScreen> {
     return Container(
       height: double.infinity,
       width: double.infinity,
-      decoration: const BoxDecoration(
-        // image: DecorationImage(
-        //   image: AssetImage("assets/im/catback.png"),
-        //   fit: BoxFit.cover,
-        // ),
-      ),
+      decoration: const BoxDecoration(),
     );
   }
 
@@ -267,6 +299,7 @@ class _PostApiScreenState extends State<PostApiScreen> {
     return TextField(
       controller: controller,
       obscureText: isPassword ? !isVisibility : false,
+      style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
@@ -279,7 +312,7 @@ class _PostApiScreenState extends State<PostApiScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(32),
-          borderSide: BorderSide(color: Colors.white, width: 1.0),
+          borderSide: const BorderSide(color: Colors.white, width: 1.0),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(32),
@@ -311,7 +344,7 @@ class _PostApiScreenState extends State<PostApiScreen> {
   Widget buildTitle(String text) {
     return Row(
       children: [
-        Text(text, style: TextStyle(fontSize: 12, color: Colors.white)),
+        Text(text, style: const TextStyle(fontSize: 12, color: Colors.white)),
       ],
     );
   }

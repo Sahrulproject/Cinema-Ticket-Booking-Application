@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:tixclick/api/register_user.dart';
 import 'package:tixclick/extension/navigation.dart';
 import 'package:tixclick/models/register_model.dart';
-import 'package:tixclick/preference/shared_preference.dart';
+import 'package:tixclick/services/auth_service.dart';
 import 'package:tixclick/views/auth/home_api.dart';
 import 'package:tixclick/views/auth/post_api_screen.dart';
 
@@ -36,55 +36,104 @@ class _LoginAPIScreenState extends State<LoginAPIScreen> {
     });
     final email = emailController.text.trim();
     final password = passwordController.text.trim();
+
     if (email.isEmpty || password.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Email, Password, dan Nama tidak boleh kosong"),
-        ),
+        const SnackBar(content: Text("Email dan Password tidak boleh kosong")),
       );
-      isLoading = false;
-
+      setState(() => isLoading = false);
       return;
     }
+
     try {
       final result = await AuthenticationAPI.loginUser(
         email: email,
         password: password,
       );
+
       setState(() {
         user = result;
       });
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Pendaftaran berhasil")));
-      PreferenceHandler.saveToken(user?.data?.token.toString() ?? "");
-      print(user?.toJson());
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => MovieApp()),
-      );
+
+      // DEBUG PRINT
+      _debugPrintResponse();
+
+      // PERBAIKAN: Token sekarang di root, bukan dalam data
+      if (user?.token != null) {
+        await _saveUserData(email);
+
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Login berhasil")));
+
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => MovieApp()),
+        );
+      } else {
+        throw Exception("Token tidak ditemukan dalam response");
+      }
     } catch (e) {
-      print(e);
+      _debugPrintError(e);
       setState(() {
         errorMessage = e.toString();
       });
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(errorMessage.toString())));
+      ).showSnackBar(SnackBar(content: Text("Login gagal: $errorMessage")));
     } finally {
-      setState(() {});
-      isLoading = false;
+      setState(() => isLoading = false);
     }
-    // ini harus slash
-    // final user = User(email: email, password: password, name: name);
-    // await DbHelper.registerUser(user);
-    // Future.delayed(const Duration(seconds: 1)).then((value) {
-    //   isLoading = false;
-    //   ScaffoldMessenger.of(
-    //     context,
-    //   ).showSnackBar(const SnackBar(content: Text("Pendaftaran berhasil")));
-    // });
-    // penutup slash
+  }
+
+  // Method untuk debug print response
+  void _debugPrintResponse() {
+    print('=== DEBUG LOGIN RESPONSE ===');
+    print('Message: ${user?.message}');
+    print('Token: ${user?.token}'); // Token di root
+    print('User name: ${user?.user?.name}');
+    print('User email: ${user?.user?.email}');
+    print('User ID: ${user?.user?.id}');
+    print('Email verified: ${user?.user?.emailVerifiedAt}');
+    print('Full response: ${user?.toJson()}');
+    print('============================');
+  }
+
+  // Method untuk debug print error
+  void _debugPrintError(dynamic e) {
+    print('=== LOGIN ERROR ===');
+    print('Error: $e');
+    print('Error type: ${e.runtimeType}');
+    if (e is Error) {
+      print('Stack trace: ${e.stackTrace}');
+    }
+    print('===================');
+  }
+
+  // Method untuk save user data - DIUBAH untuk model baru
+  Future<void> _saveUserData(String email) async {
+    // PERBAIKAN: Token di root, bukan dalam data
+    await AuthService.saveToken(user!.token!);
+    await AuthService.saveUserEmail(email);
+
+    final userName = user?.user?.name;
+    if (userName != null && userName.isNotEmpty) {
+      await AuthService.saveUserName(userName);
+    } else {
+      await AuthService.saveUserName(email);
+    }
+
+    final userId = user?.user?.id;
+    if (userId != null) {
+      await AuthService.saveUserId(userId);
+    }
+
+    print('=== DATA YANG DISIMPAN ===');
+    print('Token: ${user!.token}'); // Token di root
+    print('Name: ${userName ?? email}');
+    print('Email: $email');
+    print('ID: $userId');
+    print('==========================');
   }
 
   SafeArea buildLayer() {
@@ -94,7 +143,6 @@ class _LoginAPIScreenState extends State<LoginAPIScreen> {
         child: Center(
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            // crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Image.asset(
                 "assets/images/lg_tixclick.png",
@@ -102,7 +150,7 @@ class _LoginAPIScreenState extends State<LoginAPIScreen> {
                 width: 100,
                 fit: BoxFit.contain,
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               Text(
                 "TIXCLICK",
                 style: TextStyle(
@@ -112,20 +160,7 @@ class _LoginAPIScreenState extends State<LoginAPIScreen> {
                   color: Colors.white,
                 ),
               ),
-              SizedBox(height: 20),
-              // Text(
-              //   "Login",
-              //   style: TextStyle(
-              //     fontSize: 24,
-              //     fontWeight: FontWeight.bold,
-              //     color: Colors.white,
-              //   ),
-              // ),
-              // height(10),
-              // Text(
-              //   "Acces to purchased tickets",
-              //   style: TextStyle(fontSize: 14, color: Colors.white),
-              // ),
+              const SizedBox(height: 20),
               height(24),
               buildTitle("Email Address"),
               height(12),
@@ -146,10 +181,7 @@ class _LoginAPIScreenState extends State<LoginAPIScreen> {
                 alignment: Alignment.centerRight,
                 child: TextButton(
                   onPressed: () {
-                    // Navigator.push(
-                    //   context,
-                    //   MaterialPageRoute(builder: (context) => MeetSebelas()),
-                    // );
+                    // Forgot password functionality
                   },
                   child: Text(
                     "Forgot Password?",
@@ -166,19 +198,21 @@ class _LoginAPIScreenState extends State<LoginAPIScreen> {
                 width: double.infinity,
                 height: 56,
                 child: ElevatedButton(
-                  onPressed: () {
-                    loginUser();
-                  },
+                  onPressed: isLoading ? null : loginUser,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+                    backgroundColor: isLoading
+                        ? Colors.grey
+                        : const Color.fromARGB(255, 255, 255, 255),
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(6),
                     ),
                   ),
-                  child: Text(
-                    "Login",
-                    style: TextStyle(fontSize: 16, color: Colors.black),
-                  ),
+                  child: isLoading
+                      ? const CircularProgressIndicator(color: Colors.black)
+                      : Text(
+                          "Login",
+                          style: TextStyle(fontSize: 16, color: Colors.black),
+                        ),
                 ),
               ),
               height(16),
@@ -187,7 +221,7 @@ class _LoginAPIScreenState extends State<LoginAPIScreen> {
                 children: [
                   Expanded(
                     child: Container(
-                      margin: EdgeInsets.only(right: 8),
+                      margin: const EdgeInsets.only(right: 8),
                       height: 1,
                       color: Colors.white,
                     ),
@@ -198,7 +232,7 @@ class _LoginAPIScreenState extends State<LoginAPIScreen> {
                   ),
                   Expanded(
                     child: Container(
-                      margin: EdgeInsets.only(left: 8),
+                      margin: const EdgeInsets.only(left: 8),
                       height: 1,
                       color: Colors.white,
                     ),
@@ -213,8 +247,7 @@ class _LoginAPIScreenState extends State<LoginAPIScreen> {
                     backgroundColor: Colors.white,
                   ),
                   onPressed: () {
-                    // Navigate to MeetLima screen menggunakan pushnamed
-                    Navigator.pushNamed(context, "/meet_2");
+                    // Google sign in functionality
                   },
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.center,
@@ -240,11 +273,7 @@ class _LoginAPIScreenState extends State<LoginAPIScreen> {
                   ),
                   TextButton(
                     onPressed: () {
-                      context.push(PostApiScreen());
-                      // Navigator.pushReplacement(
-                      //   context,
-                      //   MaterialPageRoute(builder: (context) => MeetEmpatA()),
-                      // );
+                      context.push(const PostApiScreen());
                     },
                     child: Text(
                       "Sign Up",
@@ -268,12 +297,7 @@ class _LoginAPIScreenState extends State<LoginAPIScreen> {
     return Container(
       height: double.infinity,
       width: double.infinity,
-      decoration: const BoxDecoration(
-        // image: DecorationImage(
-        //   image: AssetImage("assets/im/catback.png"),
-        //   fit: BoxFit.cover,
-        //   ),
-      ),
+      decoration: const BoxDecoration(),
     );
   }
 
@@ -285,7 +309,7 @@ class _LoginAPIScreenState extends State<LoginAPIScreen> {
     return TextField(
       controller: controller,
       obscureText: isPassword ? !isVisibility : false,
-      style: TextStyle(color: Colors.white),
+      style: const TextStyle(color: Colors.white),
       decoration: InputDecoration(
         hintText: hintText,
         hintStyle: TextStyle(color: Colors.white.withOpacity(0.7)),
@@ -298,7 +322,7 @@ class _LoginAPIScreenState extends State<LoginAPIScreen> {
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(32),
-          borderSide: BorderSide(color: Colors.white, width: 1.0),
+          borderSide: const BorderSide(color: Colors.white, width: 1.0),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(32),
@@ -330,7 +354,7 @@ class _LoginAPIScreenState extends State<LoginAPIScreen> {
   Widget buildTitle(String text) {
     return Row(
       children: [
-        Text(text, style: TextStyle(fontSize: 12, color: Colors.white)),
+        Text(text, style: const TextStyle(fontSize: 12, color: Colors.white)),
       ],
     );
   }

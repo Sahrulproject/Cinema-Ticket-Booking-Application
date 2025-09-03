@@ -12,55 +12,57 @@ String registerUserModelToJson(RegisterUserModel data) =>
 
 class RegisterUserModel {
   String? message;
-  Data? data;
+  String? token;
+  User? user;
 
-  RegisterUserModel({this.message, this.data});
+  RegisterUserModel({this.message, this.token, this.user});
 
   factory RegisterUserModel.fromJson(Map<String, dynamic> json) =>
       RegisterUserModel(
         message: json["message"],
-        data: json["data"] == null ? null : Data.fromJson(json["data"]),
-      );
-
-  Map<String, dynamic> toJson() => {"message": message, "data": data?.toJson()};
-}
-
-class Data {
-  String? token;
-  User? user;
-
-  Data({this.token, this.user});
-
-  factory Data.fromJson(Map<String, dynamic> json) => Data(
-        token: json["token"],
+        token: json["token"], // Token langsung di root
         user: json["user"] == null ? null : User.fromJson(json["user"]),
       );
 
-  Map<String, dynamic> toJson() => {"token": token, "user": user?.toJson()};
+  Map<String, dynamic> toJson() => {
+    "message": message,
+    "token": token,
+    "user": user?.toJson(),
+  };
 }
 
 class User {
+  int? id;
   String? name;
   String? email;
-  String? updatedAt;
+  dynamic emailVerifiedAt;
   String? createdAt;
-  int? id;
+  String? updatedAt;
 
-  User({this.name, this.email, this.updatedAt, this.createdAt, this.id});
+  User({
+    this.id,
+    this.name,
+    this.email,
+    this.emailVerifiedAt,
+    this.createdAt,
+    this.updatedAt,
+  });
 
   factory User.fromJson(Map<String, dynamic> json) => User(
-        name: json["name"],
-        email: json["email"],
-        updatedAt: json["updated_at"],
-        createdAt: json["created_at"],
-        id: json["id"],
-      );
+    id: json["id"],
+    name: json["name"],
+    email: json["email"],
+    emailVerifiedAt: json["email_verified_at"],
+    createdAt: json["created_at"],
+    updatedAt: json["updated_at"],
+  );
 
   Map<String, dynamic> toJson() => {
-        "name": name,
-        "email": email,
-        "updated_at": updatedAt,
-        "created_at": createdAt,
-        "id": id,
-      };
+    "id": id,
+    "name": name,
+    "email": email,
+    "email_verified_at": emailVerifiedAt,
+    "created_at": createdAt,
+    "updated_at": updatedAt,
+  };
 }

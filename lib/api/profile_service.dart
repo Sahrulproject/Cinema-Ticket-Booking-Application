@@ -1,7 +1,7 @@
 import 'dart:convert';
 
 import 'package:http/http.dart' as http;
-import 'package:tixclick/api/endpoint/endpoint.dart';
+import 'package:tixclick/core/constants/endpoint.dart';
 import 'package:tixclick/models/profle_model.dart';
 import 'package:tixclick/preference/shared_preference.dart';
 
