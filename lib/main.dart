@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:tixclick/views/auth/home_api.dart';
+import 'package:tixclick/widgets/custom_button.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,7 +30,7 @@ class MyApp extends StatelessWidget {
       //   Navt8.id: (context) => Navt8(),
       //   PostApiScreen.id: (context) => PostApiScreen(),
       // },
-      home: MovieApp(),
+      home: Bottom(),
     );
   }
 }

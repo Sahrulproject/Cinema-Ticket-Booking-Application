@@ -3,6 +3,8 @@ class Endpoint {
   static const String register = "$baseURL/register";
   static const String profile = "$baseURL/profile";
   static const String login = "$baseURL/login";
+  static const String imageUrl = "$baseURL/";
+
   // static const String listFilm = "$baseUrl/films";
   // static const String tambahFilm = "$baseUrl/tambahFilm";
   // static const String listJadwalFilm = "$baseUrl/jadwal";

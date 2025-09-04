@@ -122,7 +122,6 @@ class MovieHomeScreen extends StatelessWidget {
           ),
         ),
       ),
-      bottomNavigationBar: _buildBottomNavigationBar(),
     );
   }
 
@@ -397,20 +396,6 @@ class MovieHomeScreen extends StatelessWidget {
           );
         },
       ),
-    );
-  }
-
-  // Widget untuk bottom navigation bar
-  Widget _buildBottomNavigationBar() {
-    return BottomNavigationBar(
-      backgroundColor: const Color(0xFF0F1B2B),
-      selectedItemColor: Colors.orange,
-      unselectedItemColor: Colors.grey,
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-        BottomNavigationBarItem(icon: Icon(Icons.movie), label: 'Movies'),
-        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-      ],
     );
   }
 }
